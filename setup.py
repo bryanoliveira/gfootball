@@ -189,6 +189,7 @@ setup(
         'gym<=0.21.0',
         'absl-py',
         'wheel',
+        'lz4==4.3.2',
     ],
     include_package_data=True,
     keywords='gfootball reinforcement-learning python machine learning',

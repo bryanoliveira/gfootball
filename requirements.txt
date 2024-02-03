@@ -7,3 +7,4 @@ gym<=0.21.0
 importlib-metadata==4.13
 absl-py
 wheel
+lz4==4.3.2

@@ -1,10 +1,11 @@
 import abc
 import atexit
 import json
+import lz4.frame
 import numpy as np
 import socket
 
-DEFAULT_BUFFER_SIZE = 1024
+MAX_BUFFER_SIZE = 16 * 1024**2
 server_socket = None
 client_socket = None
 
@@ -29,38 +30,43 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class Messenger(abc.ABC):
-    def sendall(self, data: str, prefix="", wait_for_ack=True):
-        assert len(prefix) <= 1
-        data = prefix + data
-        self.client_socket.sendall(data.encode("utf-8"))
-        if wait_for_ack:
-            ack = self.client_socket.recv(DEFAULT_BUFFER_SIZE)
-            if ack != b"ACK":
-                raise Exception("ACK NOT RECEIVED")
+    def sendall(self, data: str):
+        # encode data
+        data = data.encode("utf-8")
+        # compress it
+        data = lz4.frame.compress(data)
+        # send length
+        self.client_socket.sendall(len(data).to_bytes(4, byteorder="big"))
+        print(f"sent {len(data)} bytes")
+        # send data
+        self.client_socket.sendall(data)
 
-    def recvall(self, prefix="", send_ack=True) -> str:
-        assert len(prefix) <= 1
-        received_prefix = self.client_socket.recv(len(prefix.encode("utf-8"))).decode("utf-8")
-        assert (
-            received_prefix == prefix
-        ), f"Expected prefix {prefix}, got {received_prefix}"
-
+    def recvall(self) -> str:
+        # receive length
+        length = int.from_bytes(self.client_socket.recv(4), byteorder="big")
+        # receive data
         data = b""
-        while True:
-            part = self.client_socket.recv(DEFAULT_BUFFER_SIZE)
-            data += part
-            if len(part) < DEFAULT_BUFFER_SIZE:
-                # No more data, or the remaining data is less than buffer size
-                break
-        if send_ack:
-            self.client_socket.sendall(b"ACK")
-        return data.decode("utf-8")
+        while len(data) < length:
+            packet = self.client_socket.recv(
+                min(length - len(data), MAX_BUFFER_SIZE)
+            )
+            if not packet:
+                break  # Connection closed
+            data += packet
+
+        # decompress it
+        data = lz4.frame.decompress(data)
+        # decode it
+        data = data.decode("utf-8")
+        return data
 
 
 class Server(Messenger):
-    def __init__(self, port=6000):
+    def __init__(self, port=6000, verbose=False):
         global server_socket, client_socket
         self.server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEPORT, 1)
         try:
             self.server_socket.bind(("0.0.0.0", port))
             server_socket = self.server_socket
@@ -71,6 +77,7 @@ class Server(Messenger):
         self.server_socket.listen(1)
         print("AWAITING CONNECTION ON PORT", port, "...")
         self.client_socket, _ = self.server_socket.accept()
+        self.client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         client_socket = self.client_socket
         print("CONNECTED TO CLIENT", self.client_socket.getpeername())
 
@@ -83,6 +90,7 @@ class Client(Messenger):
         while True:
             try:
                 self.client_socket.connect((ip, port))
+                self.client_socket.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
                 break
             except ConnectionRefusedError:
                 continue

@@ -1,7 +1,7 @@
-
 import json
 
 from gfootball.env import player_base, socket_util
+
 
 class Player(player_base.PlayerBase, socket_util.Server):
     def __init__(self, player_config, env_config):
@@ -21,19 +21,23 @@ class Player(player_base.PlayerBase, socket_util.Server):
             }
         )
         # send configs
-        self.sendall(configs, prefix="C")
+        self.sendall(configs)
+
+        # receive client config
+        self.client_config = json.loads(self.recvall())
 
     def take_action(self, observation):
+        if not self.client_config.get("include_frame_in_obs", False):
+            for obs in observation:
+                del obs["frame"]
+
         # Send the observation to the client
         obs = json.dumps(observation, cls=socket_util.NumpyEncoder)
-        self.sendall(obs, prefix="O")
+        self.sendall(obs)
 
         # Receive action from the client
-        action = json.loads(self.recvall(prefix="A"))
+        action = json.loads(self.recvall())
         return action
 
     def reset(self):
         pass  # Add any reset behavior if needed
-
-
-
