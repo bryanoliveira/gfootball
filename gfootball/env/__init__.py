@@ -224,6 +224,59 @@ def create_environment(env_name='',
        number_of_right_players_agent_controls == 1), stacked)
   return env
 
+def create_local_remote_environment(
+    stacked=False,
+    representation='extracted',
+    number_of_left_players_agent_controls=1,
+    number_of_right_players_agent_controls=0,
+    channel_dimensions=(
+        observation_preprocessing.SMM_WIDTH,
+        observation_preprocessing.SMM_HEIGHT),
+    other_config_options={},
+    **kwargs):
+    # fixed settings
+    env_name = "11_vs_11_kaggle"
+    rewards='scoring'
+    render=False
+
+    scenario_config = config.Config({'level': env_name}).ScenarioConfig()
+    players = [('agent:left_players=%d,right_players=%d' % (
+        number_of_left_players_agent_controls,
+        number_of_right_players_agent_controls))]
+
+    # Enable MultiAgentToSingleAgent wrapper?
+    multiagent_to_singleagent = False
+    if scenario_config.control_all_players:
+      if (number_of_left_players_agent_controls in [0, 1] and
+          number_of_right_players_agent_controls in [0, 1]):
+        multiagent_to_singleagent = True
+        players = [('agent:left_players=%d,right_players=%d' %
+                    (scenario_config.controllable_left_players
+                    if number_of_left_players_agent_controls else 0,
+                    scenario_config.controllable_right_players
+                    if number_of_right_players_agent_controls else 0))]
+
+    config_values = {
+        'players': players,
+        'level': env_name,
+    }
+    config_values.update(other_config_options)
+    c = config.Config(config_values)
+
+    env = football_env.FootballEnv(c)
+    env = wrappers.RemotePlayerClientWrapper(env, **kwargs)
+    if multiagent_to_singleagent:
+        env = wrappers.MultiAgentToSingleAgent(
+            env, number_of_left_players_agent_controls,
+            number_of_right_players_agent_controls
+        )
+    elif render:
+        env.render()
+    env = _apply_output_wrappers(
+        env, rewards, representation, channel_dimensions,
+        (number_of_left_players_agent_controls +
+        number_of_right_players_agent_controls == 1), stacked)
+    return env
 
 def create_remote_environment(
     username,

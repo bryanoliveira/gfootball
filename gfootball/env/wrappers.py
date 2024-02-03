@@ -23,7 +23,9 @@ import collections
 import cv2
 from gfootball.env import football_action_set
 from gfootball.env import observation_preprocessing
+from gfootball.env import socket_util
 import gym
+import json
 import numpy as np
 
 
@@ -436,3 +438,30 @@ class MultiAgentToSingleAgent(gym.Wrapper):
         result[idx] = actions[action_idx]
         action_idx += 1
     return result
+
+
+class RemotePlayerClientWrapper(gym.Wrapper, socket_util.Client):
+    def __init__(self, env, server_ip="127.0.0.1", server_port="5000", **kwargs):
+        # init super client class first
+        socket_util.Client.__init__(self, server_ip, int(server_port))
+        # init super wrapper
+        gym.Wrapper.__init__(self, env)
+        # get the configs from the server
+        print("Waiting for server to send configs...")
+        configs = self.recvall(prefix="C")
+        print("Received configs from server:", configs)
+        configs = json.loads(configs)
+        self.player_config = configs["player_config"]
+        self.env_config = configs["env_config"]
+        print("Waiting for server to send first observation...")
+        self.observation = json.loads(self.recvall(prefix="O"))
+
+    def reset(self):
+        return self.observation
+
+    def step(self, action):
+        # Send action back to the server
+        self.sendall(json.dumps(action, socket_util.NumpyEncoder), prefix="A")
+        # Receive observation from the server
+        self.observation = json.loads(self.recvall(prefix="O"))
+        return self.observation, 0, False, {}
