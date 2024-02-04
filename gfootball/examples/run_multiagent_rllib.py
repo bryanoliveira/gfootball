@@ -108,7 +108,7 @@ if __name__ == '__main__':
   tune.run(
       'PPO',
       stop={'training_iteration': args.num_iters},
-      checkpoint_freq=50,
+      checkpoint_freq=1,
       config={
           'env': 'gfootball',
           'lambda': 0.95,
@@ -117,7 +117,6 @@ if __name__ == '__main__':
           'vf_clip_param': 10.0,
           'entropy_coeff': 0.01,
           'train_batch_size': 2000,
-          'sample_batch_size': 100,
           'sgd_minibatch_size': 500,
           'num_sgd_iter': 10,
           'num_workers': 10,
