@@ -185,7 +185,7 @@ setup(
         'opencv-python',
         'psutil',
         'numpy',
-        'importlib-metadata==4.13'
+        'importlib-metadata==4.13',
         'gym<=0.21.0',
         'absl-py',
         'wheel',
