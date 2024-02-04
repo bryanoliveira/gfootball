@@ -53,7 +53,7 @@ class Messenger(abc.ABC):
             if not packet:
                 break  # Connection closed
             data += packet
-
+        # print(f"received {len(data)} bytes")
         # decompress it
         data = lz4.frame.decompress(data)
         # decode it

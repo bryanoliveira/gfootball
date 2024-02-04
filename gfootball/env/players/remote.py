@@ -27,13 +27,15 @@ class Player(player_base.PlayerBase, socket_util.Server):
         self.client_config = json.loads(self.recvall())
 
     def take_action(self, observation):
+        obs = []
         if not self.client_config.get("include_frame_in_obs", False):
-            for obs in observation:
-                if "frame" in obs:
-                    del obs["frame"]
+            for single_obs in observation:
+                obs.append({k: v for k, v in single_obs.items() if k != "frame"})
+        else:
+            obs = observation
 
         # Send the observation to the client
-        obs = json.dumps(observation, cls=socket_util.NumpyEncoder)
+        obs = json.dumps(obs, cls=socket_util.NumpyEncoder)
         self.sendall(obs)
 
         # Receive action from the client

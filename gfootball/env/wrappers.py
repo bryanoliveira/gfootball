@@ -461,6 +461,8 @@ class RemotePlayerClientWrapper(gym.Wrapper, socket_util.Client):
     configs = json.loads(configs)
     self.player_config = configs["player_config"]
     self.env_config = configs["env_config"]
+    self.env_config["action_set"] = action_set
+    print("env_config", self.env_config)
 
     local_configs = {
       "include_frame_in_obs": include_frame_in_obs,
