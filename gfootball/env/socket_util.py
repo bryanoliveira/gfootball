@@ -37,7 +37,7 @@ class Messenger(abc.ABC):
         data = lz4.frame.compress(data)
         # send length
         self.client_socket.sendall(len(data).to_bytes(4, byteorder="big"))
-        print(f"sent {len(data)} bytes")
+        # print(f"sent {len(data)} bytes")
         # send data
         self.client_socket.sendall(data)
 

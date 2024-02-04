@@ -11,6 +11,6 @@ env = football_env.create_local_remote_environment(
 )
 obs = env.reset()
 while True:
-    obs, _, done, _ = env.step([0])
+    obs, _, done, _ = env.step([env.action_space.sample()])
     if done:
         env.reset()

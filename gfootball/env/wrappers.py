@@ -447,6 +447,7 @@ class RemotePlayerClientWrapper(gym.Wrapper, socket_util.Client):
     server_ip="127.0.0.1",
     server_port="6000",
     include_frame_in_obs=False,
+    action_set="default",
     **kwargs
   ):
     # init super client class first
@@ -462,7 +463,8 @@ class RemotePlayerClientWrapper(gym.Wrapper, socket_util.Client):
     self.env_config = configs["env_config"]
 
     local_configs = {
-      "include_frame_in_obs": include_frame_in_obs
+      "include_frame_in_obs": include_frame_in_obs,
+      "action_set": action_set,
     }
     print("Sending local configs to server:", local_configs)
     self.sendall(json.dumps(local_configs))
